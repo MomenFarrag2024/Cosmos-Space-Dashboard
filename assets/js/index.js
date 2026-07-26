@@ -92,6 +92,12 @@ apodImage.classList.add("hidden");
         `
   }
 }
+apodImage.onerror = () => {
+    apodImage.innerHTML = `
+    <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-4"></i>
+    <p class="text-slate-400">Failed to load image</p>
+       `
+};
 getApod();
 /*----------------- end section today in space -----------------*/
 /*----------------- section Launches -----------------*/
