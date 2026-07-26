@@ -18,12 +18,10 @@ navLinks.forEach((link) => {
 /*----------------- section today in space -----------------*/
 const apiKey = "9fBYFM8ZQweLfUg2NchlWsOwWzNE3c1twqeFS1tt";
 const apodUrl = "https://api.nasa.gov/planetary/apod";
-
 const apodImage = document.querySelector("#apod-image");
 const apodTitle = document.querySelector("#apod-title");
 const apodExplanation = document.querySelector("#apod-explanation");
 const apodDate = document.querySelector("#apod-date");
-
 const apodDateDetail = document.querySelector("#apod-date-detail");
 const apodDateInfo = document.querySelector("#apod-date-info");
 const apodMediaType = document.querySelector("#apod-media-type");
@@ -32,128 +30,75 @@ const loadDateBtn = document.querySelector("#load-date-btn");
 const todayApodBtn = document.querySelector("#today-apod-btn");
 const apodDateInput = document.querySelector("#apod-date-input");
 const dataInputWrapperSpan = document.querySelector(".date-input-wrapper span");
-const apodImageContainer = document.querySelector("#apod-image-container");
 const apodLoading = document.querySelector("#apod-loading");
 const viewBtn = document.querySelector("#apod-image-container button");
 let fullImageUrl = "";
+function formatDate(date) {
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
 function displayApod(data) {
-  const formatDate = new Date(data.date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-  apodDateInput.value = data.date;
-dataInputWrapperSpan.textContent = formatDate;
   apodTitle.textContent = data.title;
-  apodExplanation.textContent = data.explanation;
-  apodDate.textContent = `Astronomy Picture of the Day - ${formatDate}`;
-  apodDateDetail.innerHTML = `
-    <i class="far fa-calendar mr-2"></i>${formatDate}
-  `;
-  apodDateInfo.textContent = formatDate;
-  apodMediaType.textContent =
-    data.media_type === "image" ? "Image" : "Video";
-    apodCopyright.textContent = `© ${data.copyright}`;
-  const oldVideo = document.querySelector("#apod-video");
-if (oldVideo) {
-  oldVideo.remove();
-}
-if (data.media_type === "image") {
-  apodImage.style.display = "block";
   apodImage.src = data.url;
+  apodExplanation.textContent = data.explanation;
+  apodDate.textContent =
+    `Astronomy Picture of the Day - ${formatDate(data.date)}`;
+  apodDateDetail.textContent = formatDate(data.date);
+  apodDateInfo.textContent = formatDate(data.date);
+  apodCopyright.innerHTML =
+    `&copy; Copyright: ${data.copyright || "NASA/JPL"}`;
+  apodMediaType.textContent = data.media_type;
+  apodLoading.classList.add("hidden");
+  apodImage.classList.remove("hidden");
+  apodDateInput.value = data.date;
+  dataInputWrapperSpan.textContent = formatDate(data.date);
+  apodDateInput.max = new Date().toISOString().slice(0, 10);
   fullImageUrl = data.hdurl || data.url;
-  apodImage.alt = data.title;
-} else {
-  apodImage.style.display = "none";
-
-  apodImageContainer.insertAdjacentHTML(
-    "beforeend",
-    `
-    <iframe
-      id="apod-video"
-      src="${data.url}"
-      class="w-full h-full"
-      frameborder="0"
-      allowfullscreen>
-    </iframe>
-    `
-  );
 }
-}
-viewBtn.addEventListener("click", function () {
-  window.open(fullImageUrl, "_blank");
-});
 apodDateInput.addEventListener("change", function () {
-  const formattedDate = new Date(this.value).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-  dataInputWrapperSpan.textContent = formattedDate;
+  dataInputWrapperSpan.textContent = formatDate(apodDateInput.value);
+});
+loadDateBtn.addEventListener("click", function () {
+  getApod(apodDateInput.value);
+});
+todayApodBtn.addEventListener("click", function () {
+  getApod();
+});
+viewBtn.addEventListener("click", function () {
+  if (fullImageUrl) {
+    window.open(fullImageUrl, "_blank");
+  }
 });
 async function getApod(date = "") {
   try {
-    let url = `${apodUrl}?api_key=${apiKey}`;
+    let apiUrl = `${apodUrl}?api_key=${apiKey}`;
     if (date) {
-      url += `&date=${date}`;
+      apiUrl += `&date=${date}`;
     }
+apodLoading.classList.remove("hidden");
 apodImage.classList.add("hidden");
-apodImage.src = "";
-    apodLoading.classList.remove("hidden");
-    let response = await fetch(url);
-if (!response.ok && date) {
-  response = await fetch(`${apodUrl}?api_key=${apiKey}`);
-}
-if (!response.ok) {
-  throw new Error("Failed to fetch APOD");
-}
-const data = await response.json();
+    const res = await fetch(apiUrl);
+    const data = await res.json();
     displayApod(data);
-apodImage.onload = function () {
-  apodLoading.classList.add("hidden");
-  apodImage.classList.remove("hidden");
-};
   } catch (error) {
-  apodLoading.classList.add("hidden");
-  apodImage.src = "./assets/images/placeholder.webp";
-  apodImage.classList.remove("hidden");
-  apodTitle.textContent = "Failed to load image";
-  apodExplanation.textContent =
-    "Something went wrong while fetching data from NASA. Please try again later.";
-  apodDate.textContent = "Astronomy Picture of the Day";
-  apodDateDetail.textContent = "-";
-  apodDateInfo.textContent = "-";
-  apodMediaType.textContent = "-";
-  apodCopyright.textContent = "© NASA";
-  console.error(error);
+    console.log(error);
+    apodLoading.innerHTML = `
+            <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-4"></i>
+            <p class="text-slate-400">Failed to load today's image</p>
+            <p class="text-slate-500 text-sm mt-2">Please try again later</p>
+        `
+  }
 }
-
-
-}
-const today = new Date().toISOString().split("T")[0];
-apodDateInput.value = today;
-getApod(today);
-apodDateInput.min = "1995-06-16";
-apodDateInput.max = new Date().toISOString().split("T")[0];
-todayApodBtn.addEventListener("click", function () {
-  const today = new Date().toISOString().split("T")[0];
-  apodDateInput.value = today;
-  dataInputWrapperSpan.textContent = new Date(today).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-  getApod(today);
-});
-loadDateBtn.addEventListener("click", function () {
-  const selectedDate = apodDateInput.value;
-  getApod(selectedDate);
-});
-apodImage.onerror = function () {
-    apodLoading.classList.remove("hidden");
-    apodImage.src = "./assets/images/placeholder.webp";
-    apodImage.classList.add("hidden");
+apodImage.onerror = () => {
+    apodLoading.innerHTML = `
+    <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-4"></i>
+    <p class="text-slate-400">Failed to load image</p>
+       `
 };
+getApod();
 /*----------------- end section today in space -----------------*/
 /*----------------- section Launches -----------------*/
 const featuredLaunch = document.querySelector("#featured-launch");
@@ -264,11 +209,11 @@ const countdown = getCountdown(launch.net);
                       <i class="fas fa-clock text-2xl text-blue-400"></i>
                       <div>
                         <p class="text-2xl font-bold text-blue-400">
-  ${daysUntilLaunch}
-</p>
-<p class="text-xs text-slate-400">
-  ${dayText} Until Launch
-</p>
+                        ${daysUntilLaunch}
+                        </p>
+                        <p class="text-xs text-slate-400">
+                          ${dayText} Until Launch
+                        </p>
                       </div>
                     </div>
                     <div class="grid xl:grid-cols-2 gap-4 mb-6">
@@ -358,10 +303,10 @@ const countdown = getCountdown(launch.net);
                       class="flex items-center justify-center h-full min-h-[400px] bg-slate-800"
                     >
                       <img
-  src="${launch.image?.image_url || "./assets/images/launch-placeholder.png"}"
-  alt="${launch.name}"
-  class="w-full h-full object-cover"
-/>
+                       src="${launch.image?.image_url || "./assets/images/launch-placeholder.png"}"
+                       alt="${launch.name}"
+                       class="w-full h-full object-cover"
+                     />
                     </div>
                     <div
                       class="absolute inset-0 bg-linear-to-t from-slate-900 via-transparent to-transparent"
